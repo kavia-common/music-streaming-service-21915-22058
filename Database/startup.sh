@@ -190,6 +190,22 @@ create_or_update_role
 create_db_if_needed
 apply_privileges
 apply_schema
+
+# Optionally apply seed data when SEED_DATA=true
+if [ "${SEED_DATA:-false}" = "true" ]; then
+  SEED_PATH="$(dirname "$0")/seed.sql"
+  if [ -f "${SEED_PATH}" ]; then
+    echo "SEED_DATA=true detected. Applying seed from ${SEED_PATH} ..."
+    if ! sudo -u "${PG_SUPERUSER_UNIX}" "$(pg_bin psql)" -h "${DB_HOST}" -p "${DB_PORT}" -d "${DB_NAME}" -v ON_ERROR_STOP=1 -f "${SEED_PATH}"; then
+      echo "ERROR: Applying seed failed." >&2
+      exit 3
+    fi
+    echo "Seed applied successfully."
+  else
+    echo "SEED_DATA=true but seed.sql not found at ${SEED_PATH}; skipping."
+  fi
+fi
+
 write_connection_files
 
 echo "PostgreSQL setup complete!"
